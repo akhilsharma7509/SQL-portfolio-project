@@ -36,4 +36,4 @@ Customers Who Used a Promo Code Only for Their First Order
 
 SQL (Common Table Expressions, Window Functions, Aggregations, Joins, Filters)
 
-MySQL / PostgreSQL / SQL Server
+ SQL Server
