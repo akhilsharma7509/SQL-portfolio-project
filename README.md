@@ -32,6 +32,8 @@ Most Frequently Used Promo Code
 
 Customers Who Used a Promo Code Only for Their First Order
 
+Find the Most Popular Cuisine in Each Month.
+
 🛠 Technologies Used
 
 SQL (Common Table Expressions, Window Functions, Aggregations, Joins, Filters)
