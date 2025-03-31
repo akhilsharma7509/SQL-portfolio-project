@@ -144,4 +144,14 @@ AND NOT EXISTS (
  AND s2.Promo_code_Name IS NOT NULL
 );
 
+--Find the Most Popular Cuisine in Each Month
+WITH cuisine_count AS (
+    SELECT DATE_TRUNC('month', order_datetime) AS order_month, cuisine, COUNT(*) AS order_count
+    FROM orders
+    GROUP BY order_month, cuisine
+)
+SELECT order_month, cuisine
+FROM cuisine_count
+WHERE order_count = (SELECT MAX(order_count) FROM cuisine_count c WHERE c.order_month = cuisine_count.order_month);
+
 
