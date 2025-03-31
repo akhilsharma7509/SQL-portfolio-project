@@ -1,0 +1,147 @@
+
+--1.  find  top 3 outlet  by cuisine type without using limit and top function
+with  cte as (
+select cuisine, Restaurant_id,count(placed_at) no_of_order
+from script
+group by cuisine, Restaurant_id)
+
+
+select * from(
+select *,
+		row_number() over(partition by cuisine order by no_of_order desc) as ro
+from cte ) a
+where ro = 1;
+
+
+--Find daily new customer count from launch date 
+
+with cte as (
+select customer_code ,cast(min(placed_at) as date) as first_order_date
+from script
+group by customer_code)
+
+select first_order_date,count(customer_code) as no_of_customer
+from cte
+group by first_order_date
+order by first_order_date;
+
+--count of all users who were acquired in jan 2025 and only placed  one order in jan
+ --and did not place any other order in any month
+ 
+with cte as (
+select customer_code ,count(*) as no_of_order
+from script
+where month(placed_at) = 1 and year(placed_at) = 2025 and 
+ customer_code not in  (select distinct customer_code from script where month(placed_at) > 1)
+group by customer_code
+having count(*) = 1 )
+
+select sum(no_of_order) as total_customer
+from cte ;
+
+--list all customer with no order in last 7 days from currentdate but were acquired one month ago 
+--with their first order on promocode
+
+
+with cte as (
+select customer_code , min(placed_at) as first_order_date,
+max(placed_at) as final_order_date
+from script
+group by customer_code)
+
+
+select customer_code from 
+(
+select cte.*, script.promo_code_name 
+from cte 
+inner join script
+on cte.first_order_date = script.placed_at and cte.customer_code = script.customer_code
+where final_order_date < DATEADD(day,-7,getdate()) and final_order_date  < dateadd(day,-30,getdate())
+and script.promo_code_name  is not null ) a ;
+
+
+--growth team is planning to create a trigger that will target customers after this every third
+-- order with a personalized communication and they have asked you to create a query for this
+
+with cte as (
+select *, row_number() over(partition by customer_code order by placed_at) as ro
+from script)
+
+select *
+from cte 
+where ro % 3 =0 and cast(placed_at as date) = cast(getdate() as date);
+
+
+
+
+--list customer who placed more than 1 order and all thier order on promo only
+
+select customer_code from (
+select customer_code,count(*) as no_of_order,count(promo_code_name) as promo
+from script
+group by customer_code
+having count(*) >1 ) a
+where no_of_order = promo;
+
+--what percent of customer are organically aquired in jan 2025 ( placed their first order on promo)
+
+with cte as (
+select *,
+ROW_NUMBER() over(partition by customer_code order by placed_at) as ro
+from script
+where month(placed_at) = 1 and year(placed_at) = 2025 
+)
+
+select round(count(case when ro =1 and promo_code_name is null then customer_code end) * 100.0 / count(distinct customer_code) ,2) as percentage
+from cte;
+
+
+--How many orders were placed each day in the last 30 days?
+
+select count(*) as total_order_placed
+from script 
+where placed_at >= dateadd(day,-30,getdate());
+
+--Find the percentage of orders that were placed using a promo code.
+
+
+select count(case when promo_code_name is not null then order_id end )*100.0 /count(*) as promo_code_percent_user
+from script;
+
+
+--Identify customers who have placed an order at more than 3 different restaurants.
+
+
+
+select customer_code,count(distinct Restaurant_id) as total_restaurant
+from script
+group by customer_code
+having count(distinct Restaurant_id) >=3;
+
+
+
+--Which promo code was used the most?
+
+select  top 3 promo_code_name,count(promo_code_name) as number_used
+from script
+group by promo_code_name
+order by number_used desc;
+
+-- Find Customers Who Used a Promo Code Only for Their First Order
+with cte as (
+select customer_code,min(placed_at) as first_order 
+from script
+group by  customer_code)
+
+select c.customer_code,first_order ,Promo_code_Name
+from cte c
+join script  on c.customer_code= script.customer_code and c.first_order=script.placed_at
+where Promo_code_Name is not null
+AND NOT EXISTS (
+ SELECT 1 FROM script s2 
+ WHERE s2.customer_code = c.customer_code 
+ AND s2.placed_at > c.first_order 
+ AND s2.Promo_code_Name IS NOT NULL
+);
+
+
